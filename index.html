@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Zivya-CRM | Insights</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+
+<style>
+*{box-sizing:border-box;font-family:'Inter',sans-serif}
+body{
+  margin:0;
+  background:#0f2027;
+  color:#111;
+}
+header{
+  background:#203a43;
+  color:#fff;
+  padding:16px 20px;
+}
+header h1{
+  margin:0;
+  font-size:20px;
+}
+.container{
+  padding:20px;
+}
+.cards{
+  display:grid;
+  grid-template-columns:repeat(auto-fit,minmax(180px,1fr));
+  gap:16px;
+}
+.card{
+  background:#fff;
+  padding:20px;
+  border-radius:14px;
+  box-shadow:0 10px 30px rgba(0,0,0,.15);
+}
+.card h3{
+  margin:0 0 6px;
+  font-size:14px;
+  color:#555;
+}
+.card .value{
+  font-size:28px;
+  font-weight:700;
+}
+.chart-box{
+  margin-top:24px;
+  background:#fff;
+  padding:20px;
+  border-radius:14px;
+  box-shadow:0 10px 30px rgba(0,0,0,.15);
+}
+.bar{
+  margin:10px 0;
+}
+.bar-label{
+  font-size:13px;
+  margin-bottom:4px;
+}
+.bar-track{
+  width:100%;
+  height:14px;
+  background:#eee;
+  border-radius:10px;
+  overflow:hidden;
+}
+.bar-fill{
+  height:100%;
+  background:linear-gradient(135deg,#203a43,#2c5364);
+  width:0%;
+  transition:width .5s ease;
+}
+footer{
+  text-align:center;
+  padding:12px;
+  font-size:12px;
+  color:#aaa;
+}
+</style>
+</head>
+
+<body>
+
+<header>
+  <h1>Zivya-CRM | Insights Dashboard</h1>
+</header>
+
+<div class="container">
+
+  <div class="cards">
+    <div class="card">
+      <h3>Total Enquiries</h3>
+      <div class="value" id="total">0</div>
+    </div>
+    <div class="card">
+      <h3>New</h3>
+      <div class="value" id="new">0</div>
+    </div>
+    <div class="card">
+      <h3>In Progress</h3>
+      <div class="value" id="progress">0</div>
+    </div>
+    <div class="card">
+      <h3>Closed</h3>
+      <div class="value" id="closed">0</div>
+    </div>
+    <div class="card">
+      <h3>Last 24 Hours</h3>
+      <div class="value" id="last24">0</div>
+    </div>
+    <div class="card">
+      <h3>Resolution Rate</h3>
+      <div class="value" id="rate">0%</div>
+    </div>
+  </div>
+
+  <div class="chart-box">
+    <h3>Status Distribution</h3>
+
+    <div class="bar">
+      <div class="bar-label">New</div>
+      <div class="bar-track">
+        <div class="bar-fill" id="bar-new"></div>
+      </div>
+    </div>
+
+    <div class="bar">
+      <div class="bar-label">In Progress</div>
+      <div class="bar-track">
+        <div class="bar-fill" id="bar-progress"></div>
+      </div>
+    </div>
+
+    <div class="bar">
+      <div class="bar-label">Closed</div>
+      <div class="bar-track">
+        <div class="bar-fill" id="bar-closed"></div>
+      </div>
+    </div>
+
+  </div>
+
+</div>
+
+<footer>© 2025 Zivya</footer>
+
+<!-- FIREBASE -->
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+import { getFirestore, collection, onSnapshot } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyAFDs1F2veEivsTdgVODQxE6RbMM8PUqW8",
+  authDomain: "zivya-crm.firebaseapp.com",
+  projectId: "zivya-crm",
+  storageBucket: "zivya-crm.firebasestorage.app",
+  messagingSenderId: "966236643712",
+  appId: "1:966236643712:web:0be45d898e661cbeac6165"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+
+const totalEl = document.getElementById("total");
+const newEl = document.getElementById("new");
+const progressEl = document.getElementById("progress");
+const closedEl = document.getElementById("closed");
+const last24El = document.getElementById("last24");
+const rateEl = document.getElementById("rate");
+
+const barNew = document.getElementById("bar-new");
+const barProg = document.getElementById("bar-progress");
+const barClosed = document.getElementById("bar-closed");
+
+onSnapshot(collection(db,"enquiries"), snap=>{
+  let total = 0, newC = 0, prog = 0, closed = 0, last24 = 0;
+  const now = Date.now();
+
+  snap.forEach(d=>{
+    total++;
+    const data = d.data();
+    if(data.status==="New") newC++;
+    if(data.status==="In Progress") prog++;
+    if(data.status==="Closed") closed++;
+
+    if(data.createdAt?.toMillis){
+      if(now - data.createdAt.toMillis() <= 86400000){
+        last24++;
+      }
+    }
+  });
+
+  totalEl.textContent = total;
+  newEl.textContent = newC;
+  progressEl.textContent = prog;
+  closedEl.textContent = closed;
+  last24El.textContent = last24;
+
+  const rate = total ? Math.round((closed/total)*100) : 0;
+  rateEl.textContent = rate + "%";
+
+  barNew.style.width = total ? (newC/total*100)+"%" : "0%";
+  barProg.style.width = total ? (prog/total*100)+"%" : "0%";
+  barClosed.style.width = total ? (closed/total*100)+"%" : "0%";
+});
+</script>
+
+</body>
+</html>
